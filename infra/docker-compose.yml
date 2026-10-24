@@ -10,7 +10,7 @@ services:
       - NODE_ENV=production
       - PORT=5000
     env_file:
-      - ../server/.env.production.example
+      - ../server/.env.production
     restart: unless-stopped
     networks:
       - internal_net

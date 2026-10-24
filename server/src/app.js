@@ -1,9 +1,15 @@
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { ZodError } from 'zod';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import rateLimit from 'express-rate-limit';
 import { loadSession } from './auth/session.js';
 import { authRouter } from './routes/auth.js';
@@ -60,6 +66,18 @@ app.use('/api/pickups', pickupsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/privacy', privacyRouter);
+
+// Stage 15: In production, serve the built React PWA if available
+const clientDist = path.resolve(__dirname, '../../client/dist');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(clientDist, 'index.html'));
+    }
+    next();
+  });
+}
 
 // One place that turns errors into responses
 app.use((err, req, res, next) => {
