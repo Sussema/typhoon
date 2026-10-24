@@ -1,0 +1,28 @@
+# infra/Caddyfile - Automatic HTTPS, Reverse Proxy, and SPA Static Hosting (Section 20.3)
+
+circularlink.example.in {
+  # Reverse proxy API requests to backend Node.js container
+  handle /api/* {
+    reverse_proxy api:5000 {
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto {scheme}
+    }
+  }
+
+  # Serve Single Page Application (PWA) static assets
+  handle {
+    root * /srv/web
+    try_files {path} /index.html
+    file_server
+  }
+
+  # Security headers & compression
+  encode gzip zstd
+  header {
+    X-Content-Type-Options nosniff
+    X-Frame-Options SAMEORIGIN
+    Referrer-Policy no-referrer-when-downgrade
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  }
+}

@@ -1,0 +1,40 @@
+# infra/docker-compose.yml - Single-Server Production Deployment Stack (Section 20.3)
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+    env_file:
+      - ../server/.env.production.example
+    restart: unless-stopped
+    networks:
+      - internal_net
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../client/dist:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    networks:
+      - internal_net
+
+networks:
+  internal_net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
