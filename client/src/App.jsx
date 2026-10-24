@@ -9,10 +9,16 @@ import { AdminScreen } from './pages/AdminScreen.jsx';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('aggregator');
+  const [currentUser, setCurrentUser] = useState(null);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Navbar activeRole={activeRole} setActiveRole={setActiveRole} />
+      <Navbar
+        activeRole={activeRole}
+        setActiveRole={setActiveRole}
+        currentUser={currentUser}
+        setCurrentUser={setCurrentUser}
+      />
 
       <main style={{ flex: 1, paddingBottom: '3rem' }}>
         {activeRole === 'collector' && <CollectorScreen />}

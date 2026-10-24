@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../offline/outbox.js';
+import { LoginModal } from './LoginModal.jsx';
+import { api } from '../api/http.js';
 
-export function Navbar({ activeRole, setActiveRole }) {
+export function Navbar({ activeRole, setActiveRole, currentUser, setCurrentUser }) {
   const { t, i18n } = useTranslation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -23,12 +26,28 @@ export function Navbar({ activeRole, setActiveRole }) {
     checkOutbox();
     const interval = setInterval(checkOutbox, 4000);
 
+    // Check existing session
+    api('/auth/me')
+      .then((res) => {
+        if (res.user && res.user.authenticated) {
+          setCurrentUser(res.user);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    setCurrentUser(null);
+  };
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
@@ -110,6 +129,38 @@ export function Navbar({ activeRole, setActiveRole }) {
             </span>
           )}
 
+          {/* Auth Status & Login Button */}
+          {currentUser?.authenticated ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#ecfdf5', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #a7f3d0' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#065f46' }}>
+                👤 {currentUser.phone ? currentUser.phone.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2') : 'User'} ({currentUser.role})
+              </span>
+              <button
+                onClick={handleLogout}
+                style={{
+                  minHeight: 28,
+                  padding: '0.15rem 0.45rem',
+                  fontSize: '0.75rem',
+                  background: '#fee2e2',
+                  color: '#991b1b',
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: 600
+                }}
+                title="Log out session"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="btn btn-outline"
+              style={{ minHeight: 32, padding: '0.25rem 0.65rem', fontSize: '0.8rem', fontWeight: 600 }}
+            >
+              🔑 Login (OTP)
+            </button>
+          )}
+
           {/* Language Selector */}
           <div style={{ display: 'flex', gap: '0.25rem', background: 'var(--bg-muted)', padding: '0.2rem', borderRadius: 'var(--radius-md)' }}>
             <button
@@ -187,6 +238,15 @@ export function Navbar({ activeRole, setActiveRole }) {
           );
         })}
       </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          if (u.role) setActiveRole(u.role);
+        }}
+      />
     </header>
   );
 }

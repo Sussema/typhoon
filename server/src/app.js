@@ -5,12 +5,14 @@ import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { ZodError } from 'zod';
 import { loadSession } from './auth/session.js';
+import { authRouter } from './routes/auth.js';
 import { transactionsRouter } from './routes/transactions.js';
 import { batchesRouter } from './routes/batches.js';
 import { shipmentsRouter } from './routes/shipments.js';
 import { pickupsRouter } from './routes/pickups.js';
 
 export const app = express();
+app.set('trust proxy', 1); // behind proxy, so rate limiting sees real client IPs (Page 40)
 app.use(helmet()); // safe HTTP headers
 app.use(cors({ origin: process.env.WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '100kb' })); // refuse huge bodies
@@ -18,6 +20,7 @@ app.use(cookieParser());
 app.use(pinoHttp({ redact: ['req.headers.cookie'] })); // logs without secrets
 app.use(loadSession); // sets req.user if logged in (Stage 10)
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.use('/api/auth', authRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/batches', batchesRouter);
 app.use('/api/shipments', shipmentsRouter);
