@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { submit } from '../offline/outbox.js';
+import { QRScannerModal } from '../components/QRScannerModal.jsx';
 
 export function FacilityOperatorScreen() {
   const { t } = useTranslation();
@@ -8,6 +9,7 @@ export function FacilityOperatorScreen() {
 
   // Batch states
   const [machineCode, setMachineCode] = useState('MCH-BALER-01');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [inputKg, setInputKg] = useState('50.0');
   const [recoveredKg, setRecoveredKg] = useState('48.5');
   const [residualKg, setResidualKg] = useState('1.2');
@@ -149,7 +151,12 @@ export function FacilityOperatorScreen() {
                   value={machineCode}
                   onChange={(e) => setMachineCode(e.target.value)}
                 />
-                <button type="button" className="btn btn-outline" onClick={() => alert('Scanned machine: MCH-BALER-01')}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setIsScannerOpen(true)}
+                  title="Scan Machine QR Label with Camera"
+                >
                   📷 Scan Machine QR
                 </button>
               </div>
@@ -327,6 +334,14 @@ export function FacilityOperatorScreen() {
           )}
         </div>
       )}
+
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(scannedCode) => setMachineCode(scannedCode)}
+        expectedPrefix="CL:M:"
+        title="Scan Machine QR Label"
+      />
     </div>
   );
 }

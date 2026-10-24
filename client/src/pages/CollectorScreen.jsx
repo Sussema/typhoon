@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { submit } from '../offline/outbox.js';
+import { QRScannerModal } from '../components/QRScannerModal.jsx';
 
 export function CollectorScreen() {
   const { t } = useTranslation();
   const [householdCode, setHouseholdCode] = useState('HOME-0193');
   const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const handlePickup = async (result, points) => {
     setIsSaving(true);
@@ -60,8 +62,8 @@ export function CollectorScreen() {
             <button
               className="btn btn-outline"
               type="button"
-              onClick={() => alert(`Simulated QR Scanner: Scanned ${householdCode}`)}
-              title="Scan QR Sticker"
+              onClick={() => setIsScannerOpen(true)}
+              title="Scan Household QR Sticker with Camera"
             >
               📷 {t('scan_qr')}
             </button>
@@ -139,6 +141,14 @@ export function CollectorScreen() {
           </div>
         )}
       </div>
+
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(scannedCode) => setHouseholdCode(scannedCode)}
+        expectedPrefix="CL:H:"
+        title="Scan Household QR Sticker"
+      />
     </div>
   );
 }
