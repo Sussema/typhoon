@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { requireRole, requireFacility } from '../auth/requireRole.js';
 
 export const dashboardRouter = Router();
 
-// GET /api/dashboard/facility
-dashboardRouter.get('/facility', async (req, res) => {
+// GET /api/dashboard/facility (Protected: facility_operator or admin, strictly isolated per facility)
+dashboardRouter.get('/facility', requireRole('facility_operator', 'admin'), requireFacility, async (req, res) => {
   const facilityId = req.query.facilityId || req.user?.facilityId || '00000000-0000-0000-0000-000000000002';
 
   try {
@@ -85,8 +86,8 @@ dashboardRouter.get('/facility', async (req, res) => {
   }
 });
 
-// GET /api/dashboard/municipal
-dashboardRouter.get('/municipal', async (req, res) => {
+// GET /api/dashboard/municipal (Protected: municipal_viewer or admin)
+dashboardRouter.get('/municipal', requireRole('municipal_viewer', 'admin'), async (req, res) => {
   try {
     const wardRes = await pool.query(
       `SELECT h.ward,

@@ -4,7 +4,9 @@ import { app } from '../src/app.js';
 
 describe('Stage 11: Dashboards and Reports', () => {
   it('GET /api/dashboard/facility returns structured KPIs and machine breakdown', async () => {
-    const res = await request(app).get('/api/dashboard/facility');
+    const res = await request(app)
+      .get('/api/dashboard/facility')
+      .set('x-role', 'facility_operator');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('todayIntakeKg');
     expect(res.body).toHaveProperty('recoveryRatePct');
@@ -17,7 +19,9 @@ describe('Stage 11: Dashboards and Reports', () => {
   });
 
   it('GET /api/dashboard/municipal returns ward aggregates and baseline comparison', async () => {
-    const res = await request(app).get('/api/dashboard/municipal');
+    const res = await request(app)
+      .get('/api/dashboard/municipal')
+      .set('x-role', 'municipal_viewer');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('totalTonnageDivertedKg');
     expect(res.body).toHaveProperty('averageSegregationScore');

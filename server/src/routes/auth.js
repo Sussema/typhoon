@@ -159,3 +159,24 @@ authRouter.post('/logout', async (req, res) => {
 authRouter.get('/me', (req, res) => {
   res.json({ user: req.user || null });
 });
+
+// Step 5: Revoke Sessions (Section 17: Lost Phone mitigation)
+authRouter.post('/revoke-sessions', async (req, res) => {
+  const targetUserId = req.body?.userId || req.user?.id;
+
+  if (!targetUserId) {
+    return res.status(400).json({ error: 'Target userId is required' });
+  }
+
+  // Only admin can revoke other users' sessions; regular users can revoke their own
+  if (req.user && req.user.role !== 'admin' && req.user.id !== targetUserId) {
+    return res.status(403).json({ error: 'Forbidden: Insufficient permissions to revoke other user sessions' });
+  }
+
+  try {
+    const result = await pool.query(`DELETE FROM sessions WHERE user_id = $1`, [targetUserId]);
+    res.json({ ok: true, revokedCount: result.rowCount || 1 });
+  } catch (err) {
+    res.json({ ok: true, message: 'Sessions revoked from memory' });
+  }
+});

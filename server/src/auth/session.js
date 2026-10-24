@@ -25,11 +25,12 @@ export async function loadSession(req, res, next) {
   }
 
   // Development fallback for quick local testing (Section 8.4 CHECK)
-  if (process.env.NODE_ENV !== 'production' && !req.user) {
+  if (process.env.NODE_ENV !== 'production' && (!req.user || req.user.isDevFallback)) {
+    const role = req.headers['x-role'] || req.user?.role || 'aggregator';
     req.user = {
       id: '00000000-0000-0000-0000-000000000001',
       phone: '+919876543210',
-      role: 'aggregator',
+      role,
       facilityId: '00000000-0000-0000-0000-000000000002',
       authenticated: !!token,
       isDevFallback: !token

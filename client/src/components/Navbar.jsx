@@ -220,7 +220,10 @@ export function Navbar({ activeRole, setActiveRole, currentUser, setCurrentUser 
           return (
             <button
               key={r.id}
-              onClick={() => setActiveRole(r.id)}
+              onClick={() => {
+                setActiveRole(r.id);
+                localStorage.setItem('cl_active_role', r.id);
+              }}
               style={{
                 minHeight: 38,
                 padding: '0.4rem 0.85rem',

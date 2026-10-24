@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { ZodError } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { loadSession } from './auth/session.js';
 import { authRouter } from './routes/auth.js';
 import { transactionsRouter } from './routes/transactions.js';
@@ -19,10 +20,38 @@ app.use(helmet()); // safe HTTP headers
 app.use(cors({ origin: process.env.WEB_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '100kb' })); // refuse huge bodies
 app.use(cookieParser());
-app.use(pinoHttp({ redact: ['req.headers.cookie'] })); // logs without secrets
+
+// Stage 12: Logs are data too — mask phone numbers and redact secrets (Page 40)
+app.use(pinoHttp({
+  redact: [
+    'req.headers.cookie',
+    'req.headers.authorization',
+    'req.body.code',
+    'req.body.otp'
+  ],
+  serializers: {
+    req(req) {
+      if (req.body?.phone) {
+        req.body.phone = req.body.phone.replace(/(\d{2})\d{6}(\d{2})/, '$1******$2');
+      }
+      return req;
+    }
+  }
+}));
+
 app.use(loadSession); // sets req.user if logged in (Stage 10)
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.use('/api/auth', authRouter);
+
+// Stage 12: Rate limit on /api/auth to prevent brute-forcing OTPs (Section 17)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20, // 20 attempts per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts, please try again after 15 minutes' }
+});
+
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/batches', batchesRouter);
 app.use('/api/shipments', shipmentsRouter);
