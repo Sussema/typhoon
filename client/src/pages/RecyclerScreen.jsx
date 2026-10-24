@@ -150,7 +150,7 @@ export function RecyclerScreen() {
       {/* Evidence Pack Banner */}
       {receiptSuccess && (
         <div className="card" style={{ marginTop: '1.5rem', background: 'var(--primary-light)', border: '1px solid var(--accent)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h4 style={{ fontWeight: 800, color: 'var(--primary-dark)' }}>
                 Recycling Evidence Pack Generated ({receiptSuccess.shipmentId})
@@ -159,9 +159,20 @@ export function RecyclerScreen() {
                 Dispatched: {receiptSuccess.shippedKg} kg | Verified: {receiptSuccess.receivedKg} kg | Variance: {receiptSuccess.diffKg} kg
               </p>
             </div>
-            <span className={`badge ${receiptSuccess.flagged ? 'badge-warning' : 'badge-success'}`}>
-              {receiptSuccess.flagged ? 'Transit Variance Flagged' : 'Audit Validated'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className={`badge ${receiptSuccess.flagged ? 'badge-warning' : 'badge-success'}`}>
+                {receiptSuccess.flagged ? 'Transit Variance Flagged' : 'Audit Validated'}
+              </span>
+              <a
+                href={`/api/reports/evidence/${receiptSuccess.shipmentId}?format=html`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary"
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+              >
+                📄 View Evidence Pack
+              </a>
+            </div>
           </div>
         </div>
       )}
