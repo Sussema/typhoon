@@ -4,4 +4,5 @@ dist/
 *.log
 server/stickers/
 server/pdf_dump.txt
+server/audit_head.json
 
