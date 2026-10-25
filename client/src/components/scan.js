@@ -8,9 +8,18 @@ export async function scanOnce(elementId, expectedPrefix) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: 240 },
       async (text) => {
-        if (!text.startsWith(expectedPrefix)) return; // ignore other QR codes
-        await scanner.stop();
-        resolve(text.slice(expectedPrefix.length)); // e.g. "CL:H:HOME-0193" -> "HOME-0193"
+        const raw = text.trim();
+        if (expectedPrefix && raw.startsWith(expectedPrefix)) {
+          await scanner.stop();
+          resolve(raw.slice(expectedPrefix.length));
+          return;
+        }
+        // Accept raw code directly (e.g. WRK-0014, HOME-0193, MCH-0001)
+        if (raw.startsWith('WRK-') || raw.startsWith('HOME-') || raw.startsWith('MCH-') || !expectedPrefix) {
+          await scanner.stop();
+          resolve(raw.replace(/^CL:[A-Z]:/, ''));
+          return;
+        }
       },
       () => {} // "not found yet" — ignore
     ).catch(reject); // camera denied / missing

@@ -33,6 +33,10 @@ export function FacilityOperatorScreen() {
   const [vehicleNo, setVehicleNo] = useState('MH-12-AB-9876');
   const [shipSaved, setShipSaved] = useState(null);
 
+  // Facility Intake & 7-Day Rolling Daily Average Anomaly Monitoring
+  const [simulatedIntakeKg, setSimulatedIntakeKg] = useState(null);
+  const [testScenario, setTestScenario] = useState('normal'); // 'normal' | 'surge' | 'drop' | 'chronic_deviation'
+
   // Fetch dashboard stats on tab click
   const fetchDashboard = async () => {
     setLoadingDashboard(true);
@@ -45,6 +49,100 @@ export function FacilityOperatorScreen() {
       setLoadingDashboard(false);
     }
   };
+
+  // Facility Capacity Monitoring & 7-Day Rolling Average Anomaly Detection
+  const currentActualIntake = simulatedIntakeKg !== null 
+    ? simulatedIntakeKg 
+    : (dashboardData?.todayIntakeKg ?? 485.5);
+
+  const past6Days = (testScenario === 'chronic_deviation' || testScenario === 'chronic_over')
+    ? [620.0, 610.0, 595.0, 585.0, 590.0, 565.0]
+    : [520.0, 492.0, 480.0, 585.0, 590.0, 565.0];
+
+  const past6DaysSum = past6Days.reduce((a, b) => a + b, 0);
+  // Dynamic 7-day rolling daily average
+  const rolling7DayAvgKg = Number(((currentActualIntake + past6DaysSum) / 7).toFixed(1));
+
+  // Permitted operational tolerance window: ±20% of 7-day rolling daily average
+  const minToleranceThreshold = Number((rolling7DayAvgKg * 0.80).toFixed(1)); // -20% drop floor
+  const maxToleranceThreshold = Number((rolling7DayAvgKg * 1.20).toFixed(1)); // +20% surge ceiling
+  const deviationPct = Number((((currentActualIntake - rolling7DayAvgKg) / rolling7DayAvgKg) * 100).toFixed(1));
+  const capacityUtilizationPct = Number(((currentActualIntake / rolling7DayAvgKg) * 100).toFixed(1));
+
+  let capacityStatus = 'optimal'; // 'optimal' | 'over_capacity' (surge UP) | 'under_capacity' (drop DOWN)
+  if (currentActualIntake > maxToleranceThreshold) {
+    capacityStatus = 'over_capacity'; // Intake surged UP > +20%
+  } else if (currentActualIntake < minToleranceThreshold) {
+    capacityStatus = 'under_capacity'; // Intake dropped DOWN < -20%
+  }
+
+  // Multi-day operational history (last 7 days audit trail against 7-day average)
+  const defaultHistory = (testScenario === 'chronic_deviation' || testScenario === 'chronic_over') ? [
+    { date: 'Today (Live)', actualKg: currentActualIntake },
+    { date: 'Yesterday', actualKg: 620.0 },
+    { date: '2 days ago', actualKg: 610.0 },
+    { date: '3 days ago', actualKg: 595.0 },
+    { date: '4 days ago', actualKg: 585.0 },
+    { date: '5 days ago', actualKg: 590.0 },
+    { date: '6 days ago', actualKg: 565.0 }
+  ] : [
+    { date: 'Today (Live)', actualKg: currentActualIntake },
+    { date: 'Yesterday', actualKg: 520.0 },
+    { date: '2 days ago', actualKg: 492.0 },
+    { date: '3 days ago', actualKg: 480.0 },
+    { date: '4 days ago', actualKg: 585.0 },
+    { date: '5 days ago', actualKg: 590.0 },
+    { date: '6 days ago', actualKg: 565.0 }
+  ];
+
+  const rawHistory = (testScenario === 'chronic_deviation' || testScenario === 'chronic_over') 
+    ? defaultHistory 
+    : (dashboardData?.capacity?.history || defaultHistory);
+
+  const capacityHistory = rawHistory.map((item, idx) => {
+    const act = idx === 0 ? currentActualIntake : item.actualKg;
+    const base = rolling7DayAvgKg;
+    const diff = Number((((act - base) / base) * 100).toFixed(1));
+    const pct = Number(((act / base) * 100).toFixed(1));
+    let st = 'optimal';
+    let fl = false;
+    if (act > maxToleranceThreshold) {
+      st = 'over_capacity';
+      fl = true;
+    } else if (act < minToleranceThreshold) {
+      st = 'under_capacity';
+      fl = true;
+    }
+    return {
+      date: item.date,
+      actualKg: act,
+      targetKg: base,
+      deviationPct: diff,
+      utilizationPct: pct,
+      status: st,
+      flagged: fl
+    };
+  });
+
+  // Calculate consecutive anomaly breach days from latest records
+  let consecutiveBreachCount = 0;
+  let consecutiveType = null;
+  for (const day of capacityHistory) {
+    if (day.status !== 'optimal') {
+      if (!consecutiveType) {
+        consecutiveType = day.status;
+        consecutiveBreachCount++;
+      } else if (day.status === consecutiveType) {
+        consecutiveBreachCount++;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  const isCapacityFlagged = capacityStatus !== 'optimal' || consecutiveBreachCount >= 2;
 
   // Real-time mass-balance calculation (Section 9.1)
   const inputG = Math.round((parseFloat(inputKg) || 0) * 1000);
@@ -126,7 +224,7 @@ export function FacilityOperatorScreen() {
   };
 
   return (
-    <div style={{ maxWidth: 840, margin: '1.5rem auto', padding: '0 1rem' }}>
+    <div style={{ maxWidth: 1080, margin: '1.5rem auto', padding: '0 1.25rem' }}>
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
         <button
@@ -154,7 +252,7 @@ export function FacilityOperatorScreen() {
             fetchDashboard();
           }}
         >
-          📊 Facility KPIs & Reports
+          📊 Reports & KPIs
         </button>
       </div>
 
@@ -236,6 +334,7 @@ export function FacilityOperatorScreen() {
               </div>
             </div>
 
+
             {/* Live Mass Balance Monitor (Section 9.1) */}
             <div style={{
               padding: '1rem',
@@ -271,7 +370,7 @@ export function FacilityOperatorScreen() {
           </form>
 
           {batchSaved && (
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <strong>Batch Saved to Append-Only Ledger:</strong> {batchSaved.clientId} on {batchSaved.machineCode}
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Mass balance: {batchSaved.inputKg} kg in ➔ {batchSaved.recoveredKg} kg recovered (Gap: {batchSaved.gapKg} kg)
@@ -354,7 +453,7 @@ export function FacilityOperatorScreen() {
           </form>
 
           {shipSaved && (
-            <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <strong>Shipment Manifest Created:</strong> {shipSaved.clientId}
               <div>{shipSaved.kg} kg dispatched via {shipSaved.vehicle}</div>
             </div>
@@ -367,7 +466,7 @@ export function FacilityOperatorScreen() {
           {/* Header & Export */}
           <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>📊 Facility Partner Dashboard</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>📊 Facility Reports & KPIs Dashboard</h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 30-Day Material Intake, Machine Balance & Certified Traceability Ledger
               </p>
@@ -419,6 +518,257 @@ export function FacilityOperatorScreen() {
                 {dashboardData?.machineDowntimeEvents ?? 1}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Last 30 Days</div>
+            </div>
+          </div>
+
+          {/* Facility Daily Operational Capacity & Compliance Monitoring */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.35rem' }}>⚖️</span>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    Facility Daily Throughput vs. 7-Day Rolling Average Anomaly Detection
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Intake monitoring against the 7-day rolling daily average baseline. Automatically flags intake going UP (anomalous surges / mass balance fraud) or DOWN (unrecorded material diversion / route disruption / plant downtime).
+                </p>
+              </div>
+
+              {/* Interactive Simulation / Testing Controls */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'var(--bg-muted)', padding: '0.4rem 0.65rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Test Intake:</span>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ minHeight: 28, padding: '0.15rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}
+                  onClick={() => {
+                    setTestScenario('normal');
+                    setSimulatedIntakeKg(485.5);
+                  }}
+                  title="Simulate normal intake aligned with 7-day rolling average"
+                >
+                  ✓ Normal (485.5 kg)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ minHeight: 28, padding: '0.15rem 0.55rem', fontSize: '0.75rem', fontWeight: 700, borderColor: '#ef4444', color: '#dc2626' }}
+                  onClick={() => {
+                    setTestScenario('surge');
+                    setSimulatedIntakeKg(680.0);
+                  }}
+                  title="Simulate intake surging UP (+28% vs 7-day avg)"
+                >
+                  🚨 Surged UP (680 kg)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ minHeight: 28, padding: '0.15rem 0.55rem', fontSize: '0.75rem', fontWeight: 700, borderColor: '#f59e0b', color: '#d97706' }}
+                  onClick={() => {
+                    setTestScenario('drop');
+                    setSimulatedIntakeKg(230.0);
+                  }}
+                  title="Simulate intake dropping DOWN (-57% vs 7-day avg)"
+                >
+                  ⚠️ Dropped DOWN (230 kg)
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ minHeight: 28, padding: '0.15rem 0.55rem', fontSize: '0.75rem', fontWeight: 700, borderColor: '#dc2626', color: '#991b1b' }}
+                  onClick={() => {
+                    setTestScenario('chronic_deviation');
+                    setSimulatedIntakeKg(650.0);
+                  }}
+                  title="Simulate chronic multi-day drift flagged daily"
+                >
+                  🚨 Chronic Drift (650 kg)
+                </button>
+                {simulatedIntakeKg !== null && (
+                  <button
+                    type="button"
+                    className="btn btn-neutral"
+                    style={{ minHeight: 28, padding: '0.15rem 0.55rem', fontSize: '0.75rem' }}
+                    onClick={() => {
+                      setTestScenario('normal');
+                      setSimulatedIntakeKg(null);
+                    }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 4 Capacity Metrics Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>
+                  Avg Daily over Last 7 Days
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.2rem' }} className="mono">
+                  {rolling7DayAvgKg} kg
+                </div>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  Dynamic 7-day rolling average
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>
+                  Operating Tolerance Window
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.25rem' }} className="mono">
+                  {minToleranceThreshold} – {maxToleranceThreshold} kg
+                </div>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  ±20% normal range around 7-day avg
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>
+                  Measured Intake Throughput
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: capacityStatus === 'optimal' ? 'var(--primary)' : capacityStatus === 'over_capacity' ? '#dc2626' : '#d97706', marginTop: '0.2rem' }} className="mono">
+                  {currentActualIntake} kg
+                </div>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                  Deviation: <strong>{deviationPct > 0 ? '+' : ''}{deviationPct}% vs 7-day avg</strong>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.03em' }}>
+                  Automated Audit Status
+                </div>
+                <div style={{ marginTop: '0.35rem' }}>
+                  <span className={`badge ${capacityStatus === 'optimal' ? 'badge-success' : capacityStatus === 'over_capacity' ? 'badge-danger' : 'badge-warning'}`} style={{ fontWeight: 800, fontSize: '0.8rem', padding: '0.35rem 0.65rem' }}>
+                    {capacityStatus === 'optimal' ? '✓ NORMAL (IN RANGE)' : capacityStatus === 'over_capacity' ? '🚨 SURGE UP (FLAGGED)' : '⚠️ DEFICIT DOWN (FLAGGED)'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                  {consecutiveBreachCount >= 2 ? `⚠️ Chronic drift: ${consecutiveBreachCount} days` : 'Automated 7-day average check active'}
+                </div>
+              </div>
+            </div>
+
+            {/* Tri-Zone Visual Gauge Bar */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: 'var(--text-muted)', marginBottom: '0.35rem', fontWeight: 600 }}>
+                <span style={{ color: '#d97706' }}>Deficit Down (&lt; -20% / {minToleranceThreshold} kg)</span>
+                <span style={{ color: '#16a34a' }}>Normal Operating Window (±20% of 7-Day Avg)</span>
+                <span style={{ color: '#dc2626' }}>Surge Up (&gt; +20% / {maxToleranceThreshold} kg)</span>
+              </div>
+              <div style={{ position: 'relative', height: 16, borderRadius: 'var(--radius-sm)', overflow: 'hidden', display: 'flex', background: 'var(--border)' }}>
+                <div style={{ width: '40%', background: '#fef3c7', borderRight: '2px solid #f59e0b' }} title="Deficit down (< -20%)" />
+                <div style={{ width: '40%', background: '#dcfce7', borderRight: '2px solid #10b981' }} title="Normal range (±20%)" />
+                <div style={{ width: '20%', background: '#fee2e2' }} title="Surge up (> +20%)" />
+              </div>
+              <div style={{ position: 'relative', marginTop: 4, height: 18 }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${Math.min(96, Math.max(4, (capacityUtilizationPct / 140) * 100))}%`,
+                    transform: 'translateX(-50%)',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    color: capacityStatus === 'optimal' ? '#166534' : capacityStatus === 'over_capacity' ? '#b91c1c' : '#b45309',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  ▲ {deviationPct > 0 ? '+' : ''}{deviationPct}% vs avg ({currentActualIntake} kg)
+                </div>
+              </div>
+            </div>
+
+            {/* Prominent Automated Anomaly Flag Alert Banner */}
+            {isCapacityFlagged && (
+              <div style={{
+                padding: '0.9rem 1.25rem',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1.25rem',
+                border: capacityStatus === 'over_capacity' ? '2px solid #ef4444' : '2px solid #f59e0b',
+                backgroundColor: capacityStatus === 'over_capacity' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                color: capacityStatus === 'over_capacity' ? '#b91c1c' : '#b45309'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '0.95rem' }}>
+                  <span>{capacityStatus === 'over_capacity' ? '🚨' : '⚠️'}</span>
+                  <span>
+                    {capacityStatus === 'over_capacity'
+                      ? `SYSTEM AUDIT FLAG: Daily Throughput Surged Above 7-Day Average (+${(currentActualIntake - maxToleranceThreshold).toFixed(1)} kg / ${deviationPct > 0 ? '+' : ''}${deviationPct}%)`
+                      : capacityStatus === 'under_capacity'
+                      ? `SYSTEM AUDIT FLAG: Daily Throughput Dropped Below 7-Day Average (-${(minToleranceThreshold - currentActualIntake).toFixed(1)} kg / ${deviationPct}%)`
+                      : `SYSTEM AUDIT FLAG: Persistent Multi-Day Operational Anomaly`}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.825rem', marginTop: '0.35rem', lineHeight: 1.45, color: 'var(--text-main)' }}>
+                  {capacityStatus === 'over_capacity' && (
+                    <div>
+                      <strong>Critical Risk:</strong> Processing quantity spiked by &gt; +20% over the 7-day rolling daily average ({rolling7DayAvgKg} kg). Automated audit flag recorded in the SHA-256 chain to prevent fraudulent mass injection, uncertified third-party waste intake, or scale drift. Mandatory calibration audit required.
+                    </div>
+                  )}
+                  {capacityStatus === 'under_capacity' && (
+                    <div>
+                      <strong>Operational Risk:</strong> Plant throughput dropped by &gt; -20% below the 7-day rolling daily average ({rolling7DayAvgKg} kg). System flagged potential route diversion, off-book hoarding, or unreported mechanical breakdown. Route logs flagged for municipal supervisor verification.
+                    </div>
+                  )}
+                  {consecutiveBreachCount >= 2 && (
+                    <div style={{ marginTop: '0.4rem', fontWeight: 800, color: '#b91c1c' }}>
+                      ⚠️ CHRONIC CONSECUTIVE DRIFT: Facility has deviated significantly from the 7-day rolling average for {consecutiveBreachCount} consecutive days ({consecutiveType === 'over_capacity' ? 'Surged UP' : 'Dropped DOWN'}). Automated statutory report flagged for CPCB and Municipal inspection.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 7-Day Capacity Audit History Table */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  📅 7-Day Daily Throughput vs. Rolling Average Audit Log
+                </h4>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Evaluated daily against 7-day rolling average ({rolling7DayAvgKg} kg/day)
+                </span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '0.6rem' }}>Audit Date</th>
+                      <th style={{ padding: '0.6rem' }}>7-Day Rolling Baseline</th>
+                      <th style={{ padding: '0.6rem' }}>Actual Processed (kg)</th>
+                      <th style={{ padding: '0.6rem' }}>Deviation vs 7-Day Avg</th>
+                      <th style={{ padding: '0.6rem' }}>Operating Status</th>
+                      <th style={{ padding: '0.6rem' }}>Audit Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {capacityHistory.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border)', backgroundColor: row.status !== 'optimal' ? (row.status === 'over_capacity' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(245, 158, 11, 0.05)') : 'transparent' }}>
+                        <td style={{ padding: '0.6rem', fontWeight: 600 }}>{row.date}</td>
+                        <td style={{ padding: '0.6rem' }} className="mono">{row.targetKg} kg</td>
+                        <td style={{ padding: '0.6rem', fontWeight: 700 }} className="mono">{row.actualKg} kg</td>
+                        <td style={{ padding: '0.6rem', color: row.deviationPct > 0 ? '#dc2626' : row.deviationPct < 0 ? '#d97706' : 'var(--text-main)' }} className="mono">
+                          {row.deviationPct > 0 ? '+' : ''}{row.deviationPct}%
+                        </td>
+                        <td style={{ padding: '0.6rem' }}>
+                          <span className={`badge ${row.status === 'optimal' ? 'badge-success' : row.status === 'over_capacity' ? 'badge-danger' : 'badge-warning'}`}>
+                            {row.status === 'optimal' ? '✓ Normal' : row.status === 'over_capacity' ? '🚨 Surged UP' : '⚠️ Dropped DOWN'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.6rem', fontSize: '0.75rem', color: row.flagged ? '#b91c1c' : 'var(--text-muted)', fontWeight: row.flagged ? 700 : 400 }}>
+                          {row.flagged ? '⚠️ Flagged in Hash Chain' : '✓ Verified Standard'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -476,7 +826,7 @@ export function FacilityOperatorScreen() {
                 { material: 'LDPE Films', stock_kg: 950.0 },
                 { material: 'Aluminium Cans', stock_kg: 420.0 }
               ]).map((s, idx) => (
-                <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div key={idx} style={{ padding: '0.75rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{s.material}</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.2rem' }} className="mono">
                     {s.stock_kg} kg

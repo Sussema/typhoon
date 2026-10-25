@@ -100,7 +100,7 @@ export function AdminScreen() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
             gap: '1rem',
             padding: '1rem',
-            background: '#f8fafc',
+            background: 'var(--bg-muted)',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border)'
           }}>
@@ -108,8 +108,8 @@ export function AdminScreen() {
               <div
                 key={idx}
                 style={{
-                  background: 'white',
-                  border: '2px dashed #94a3b8',
+                  background: 'var(--bg-surface)',
+                  border: '2px dashed var(--border)',
                   borderRadius: 'var(--radius-sm)',
                   padding: '1rem',
                   textAlign: 'center',
@@ -257,7 +257,7 @@ export function AdminScreen() {
               </div>
             </div>
 
-            <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
               {noticeLang === 'mr' && (
                 <div>
                   <h4 style={{ fontWeight: 800, color: 'var(--primary-dark)', marginBottom: '0.5rem' }}>

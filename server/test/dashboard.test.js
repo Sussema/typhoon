@@ -16,6 +16,11 @@ describe('Stage 11: Dashboards and Reports', () => {
     expect(Array.isArray(res.body.machines)).toBe(true);
     expect(res.body.machines[0]).toHaveProperty('machine');
     expect(res.body.machines[0]).toHaveProperty('recovery_pct');
+    expect(res.body).toHaveProperty('capacity');
+    expect(res.body.capacity).toHaveProperty('dailyRatedKg');
+    expect(res.body.capacity).toHaveProperty('utilizationPct');
+    expect(res.body.capacity).toHaveProperty('status');
+    expect(Array.isArray(res.body.capacity.history)).toBe(true);
   });
 
   it('GET /api/dashboard/municipal returns ward aggregates and baseline comparison', async () => {

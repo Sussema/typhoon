@@ -20,6 +20,7 @@ import { pickupsRouter } from './routes/pickups.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { reportsRouter } from './routes/reports.js';
 import { privacyRouter } from './routes/privacy.js';
+import { householdsRouter } from './routes/households.js';
 
 export const app = express();
 app.set('trust proxy', 1); // behind proxy, so rate limiting sees real client IPs (Page 40)
@@ -66,6 +67,7 @@ app.use('/api/pickups', pickupsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/privacy', privacyRouter);
+app.use('/api/households', householdsRouter);
 
 // Stage 15: In production, serve the built React PWA if available
 const clientDist = path.resolve(__dirname, '../../client/dist');

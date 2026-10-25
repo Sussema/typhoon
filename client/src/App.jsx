@@ -6,6 +6,7 @@ import { FacilityOperatorScreen } from './pages/FacilityOperatorScreen.jsx';
 import { RecyclerScreen } from './pages/RecyclerScreen.jsx';
 import { MunicipalDashboard } from './pages/MunicipalDashboard.jsx';
 import { AdminScreen } from './pages/AdminScreen.jsx';
+import { HouseholdScreen } from './pages/HouseholdScreen.jsx';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('aggregator');
@@ -27,6 +28,7 @@ export default function App() {
         {activeRole === 'recycler' && <RecyclerScreen />}
         {activeRole === 'municipal_viewer' && <MunicipalDashboard />}
         {activeRole === 'admin' && <AdminScreen />}
+        {activeRole === 'household' && <HouseholdScreen />}
       </main>
 
       <footer style={{
@@ -35,7 +37,7 @@ export default function App() {
         borderTop: '1px solid var(--border)',
         fontSize: '0.8rem',
         color: 'var(--text-muted)',
-        background: 'white'
+        background: 'var(--bg-surface)'
       }}>
         <div><strong>CircularLink</strong> · Built to MITSUI-PS-01 Specification (Team Typhoon)</div>
         <div style={{ marginTop: '0.25rem' }}>

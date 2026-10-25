@@ -30,7 +30,7 @@ export function MunicipalDashboard() {
   };
 
   return (
-    <div style={{ maxWidth: 1040, margin: '1.5rem auto', padding: '0 1rem' }}>
+    <div style={{ maxWidth: 1280, margin: '1.5rem auto', padding: '0 1.25rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
@@ -61,7 +61,7 @@ export function MunicipalDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="card">
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Diverted from Landfill</div>
           <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)', margin: '0.25rem 0' }}>
@@ -94,30 +94,30 @@ export function MunicipalDashboard() {
       </div>
 
       {/* Baseline vs Current Impact (Section 16, Page 39) */}
-      <div className="card" style={{ marginBottom: '1.5rem', background: 'linear-gradient(to right, #f8fafc, #f0fdf4)' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--primary-dark)' }}>
+      <div className="card" style={{ marginBottom: '1.5rem', background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>
           📈 Baseline vs. CircularLink Pilot Evaluation (Equipment & Process Upgrade)
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
-          <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginTop: '0.75rem' }}>
+          <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pre-Upgrade Baseline Recovery</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#64748b' }}>{baseline.baselineRecoveryRatePct}%</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Manual paper records</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#64748b', marginTop: '0.2rem' }}>{baseline.baselineRecoveryRatePct}%</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>Manual paper records</div>
           </div>
-          <div>
+          <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CircularLink Verified Recovery</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>{baseline.currentRecoveryRatePct}%</div>
-            <div style={{ fontSize: '0.7rem', color: '#16a34a' }}>Digital WebSerial scales</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.2rem' }}>{baseline.currentRecoveryRatePct}%</div>
+            <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '0.1rem' }}>Digital WebSerial scales</div>
           </div>
-          <div>
+          <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Landfill Diversion Gain</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#16a34a' }}>+{baseline.landfillDiversionDeltaPct}%</div>
-            <div style={{ fontSize: '0.7rem', color: '#16a34a' }}>Recovered high-value polymers</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#16a34a', marginTop: '0.2rem' }}>+{baseline.landfillDiversionDeltaPct}%</div>
+            <div style={{ fontSize: '0.7rem', color: '#16a34a', marginTop: '0.1rem' }}>Recovered high-value polymers</div>
           </div>
-          <div>
+          <div style={{ padding: '0.85rem', background: 'var(--bg-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Contamination Reduction</div>
-            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0284c7' }}>-{baseline.contaminationReductionPct}%</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Doorstep segregation scoring</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0284c7', marginTop: '0.2rem' }}>-{baseline.contaminationReductionPct}%</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>Doorstep segregation scoring</div>
           </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ export function MunicipalDashboard() {
                 </td>
                 <td style={{ padding: '0.75rem 0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, maxWidth: 80 }}>
+                    <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, maxWidth: 80 }}>
                       <div style={{ width: `${w.segregation_pct}%`, height: 6, background: 'var(--primary)', borderRadius: 3 }}></div>
                     </div>
                     <span className="mono">{w.segregation_pct}%</span>
@@ -162,12 +162,14 @@ export function MunicipalDashboard() {
 
       {/* Legal & Regulatory Limits Notice */}
       <div style={{
-        padding: '0.85rem 1.1rem',
+        padding: '1rem 1.25rem',
         borderRadius: 'var(--radius-md)',
-        background: '#f1f5f9',
-        fontSize: '0.8rem',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        fontSize: '0.825rem',
         color: 'var(--text-muted)',
-        borderLeft: '4px solid var(--primary)'
+        borderLeft: '4px solid var(--primary)',
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div><strong>Legal & Compliance Framework (Chapters 16 & 18):</strong></div>
         <div style={{ marginTop: '0.25rem' }}>

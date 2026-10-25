@@ -49,7 +49,17 @@ export async function syncOutbox() {
   }
 }
 
+export async function clearOutbox() {
+  await db.outbox.clear();
+}
+
+export async function getOutboxCount() {
+  return await db.outbox.count();
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('online', syncOutbox);
   setInterval(syncOutbox, 30_000);
+  window.clearOutbox = clearOutbox;
+  window.resetWaitingQueue = clearOutbox;
 }
